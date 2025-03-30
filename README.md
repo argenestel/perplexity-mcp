@@ -88,6 +88,10 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 7. Build the server: 
 npm run build
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=DaInfernalCoder/perplexity-mcp&type=Date)](https://www.star-history.com/#DaInfernalCoder/perplexity-mcp&Date)
+
 Make sure to:
 - Replace /absolute/path/to with the actual path where you cloned the repository
 - Replace your-api-key-here with your Perplexity API key

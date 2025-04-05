@@ -1,6 +1,14 @@
-# Perplexity MCP Server
+# MCP-researcher Server
+[![smithery badge](https://smithery.ai/badge/@DaInfernalCoder/perplexity-mcp)](https://smithery.ai/server/@DaInfernalCoder/perplexity-mcp) 
 
-An intelligent research assistant powered by Perplexity's specialized AI models. Features automatic query complexity detection to route requests to the most appropriate model for optimal results. Unlike the Official server, it has search capabilities FOR EVERY TASK, essentially 
+Your own research assistant inside of Cline! Utilizes Perplexity's new Sonar Pro API to get docs, create up-to-date api routes, and check deprecated code while you create features with Cline. Features automatic query complexity detection to route requests to the most appropriate model for optimal results.
+
+Includes Chain of Thought Reasoning and local chat history through SQLite thanks to Lix for the idea :)
+
+Check out our article about perplexity mcp! 
+https://cline.bot/blog/supercharge-cline-3-ways-to-build-better-with-perplexity-mcp
+
+<a href="https://glama.ai/mcp/servers/g1i6ilg8sl"><img width="380" height="200" src="https://glama.ai/mcp/servers/g1i6ilg8sl/badge" alt="MCP-researcher Server MCP server" /></a>
 
 ## Tools
 
@@ -74,6 +82,14 @@ The server automatically analyzes query complexity to route requests to the most
 
 You can override the automatic selection using `force_model: true` in any tool's arguments.
 
+### Installing via Smithery
+
+To install MCP-researcher Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@DaInfernalCoder/perplexity-mcp):
+
+```bash
+npx -y @smithery/cli install @DaInfernalCoder/perplexity-mcp --client claude
+```
+
 ## Setup
 
 1. **Prerequisites**
@@ -126,6 +142,7 @@ Or use NPX to not have to install it locally:
   }
 }
 ```
+
 ## Local Development
 
 1. Clone the repository
@@ -141,3 +158,7 @@ or
 
 - Type checking: `npm test`
 - Manual testing: `npm run inspector`
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=DaInfernalCoder/perplexity-mcp&type=Date)](https://www.star-history.com/#DaInfernalCoder/perplexity-mcp&Date)

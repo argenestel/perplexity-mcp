@@ -9,7 +9,6 @@ import {
   ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
 import axios from "axios";
-import Database from "better-sqlite3";
 import { existsSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { homedir } from "os";

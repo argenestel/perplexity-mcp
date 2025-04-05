@@ -4,6 +4,8 @@ An intelligent research assistant powered by Perplexity's specialized AI models.
 
 ## Tools
 
+**Quick Note: The Deep Research tool is going to timeout with some tools like cline, but not with others like cursor due to implementation differences, but the reason tool makes up for it.**
+
 ### 1. Search (Sonar Pro)
 Quick search for simple queries and basic information lookup. Best for straightforward questions that need concise, direct answers.
 
@@ -79,6 +81,7 @@ You can override the automatic selection using `force_model: true` in any tool's
 1. **Prerequisites**
    - Node.js (from [nodejs.org](https://nodejs.org))
    - Perplexity API key (from [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api))
+   - clone the repo somewhere
 
 2. **Configure MCP Settings**
 
@@ -100,16 +103,9 @@ Add to your MCP settings file (location varies by platform):
 }
 ```
 
-Settings file locations:
-- Cursor: 
-  - macOS: `~/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
-  - Windows: `%APPDATA%\Cursor\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
-  - Linux: `~/.config/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
-- Claude Desktop:
-  - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-  - Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
-Or use NPX to not have to install it locally: 
+Or use NPX to not have to install it locally (recommended for macos): 
+
 ```json
 {
   "mcpServers": {
@@ -126,18 +122,4 @@ Or use NPX to not have to install it locally:
   }
 }
 ```
-## Local Development
 
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Build: `npm run build`
-4. Start: `npm start`
-5. put in the api key
-
-or
-1. use the npx command and put in the api key
-
-## Testing
-
-- Type checking: `npm test`
-- Manual testing: `npm run inspector`

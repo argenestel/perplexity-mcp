@@ -1,86 +1,143 @@
-We got an article about researcher! 
-https://cline.bot/blog/supercharge-cline-3-ways-to-build-better-with-perplexity-mcp
+# Perplexity MCP Server
 
-# MCP-researcher Server
-
-Your own research assistant inside of Cline! Utilizes Perplexity's new Sonar Pro API to get docs, create up-to-date api routes, and check deprecated code while you create features with Cline. 
-
-Includes Chain of Thought Reasoning and local chat history through SQLite thanks to Lix for the idea :)
-
-<a href="https://glama.ai/mcp/servers/g1i6ilg8sl"><img width="380" height="200" src="https://glama.ai/mcp/servers/g1i6ilg8sl/badge" alt="MCP-researcher Server MCP server" /></a>
+An intelligent research assistant powered by Perplexity's specialized AI models. Features automatic query complexity detection to route requests to the most appropriate model for optimal results. Unlike the Official server, it has search capabilities FOR EVERY TASK, essentially 
 
 ## Tools
 
-### 1. [Search](https://github.com/DaInfernalCoder/researcher-mcp/blob/main/examples/search.md)
-Performs general search queries to get comprehensive information on any topic. The example shows how to use different detail levels (brief, normal, detailed) to get tailored responses.
+### 1. Search (Sonar Pro)
+Quick search for simple queries and basic information lookup. Best for straightforward questions that need concise, direct answers.
 
-### 2. [Get Documentation](https://github.com/DaInfernalCoder/researcher-mcp/blob/main/examples/find-apis.md)
-Retrieves documentation and usage examples for specific technologies, libraries, or APIs. The example demonstrates getting comprehensive documentation for React hooks, including best practices and common pitfalls.
+```javascript
+const result = await use_mcp_tool({
+  server_name: "perplexity",
+  tool_name: "search",
+  arguments: {
+    query: "What is the capital of France?",
+    force_model: false // Optional: force using this model even if query seems complex
+  }
+});
+```
 
-### 3. [Find APIs](https://github.com/DaInfernalCoder/researcher-mcp/blob/main/examples/find-apis.md)
-Discovers and evaluates APIs that could be integrated into a project. The example shows finding payment processing APIs with detailed analysis of features, pricing, and integration complexity.
+### 2. Reason (Sonar Reasoning Pro)
+Handles complex, multi-step tasks requiring detailed analysis. Perfect for explanations, comparisons, and problem-solving.
 
-### 4. [Check Deprecated Code](https://github.com/DaInfernalCoder/researcher-mcp/blob/main/examples/check-deprecated-code.md)
-Analyzes code for deprecated features or patterns, providing migration guidance. The example demonstrates checking React class components and lifecycle methods for modern alternatives.
+```javascript
+const result = await use_mcp_tool({
+  server_name: "perplexity",
+  tool_name: "reason",
+  arguments: {
+    query: "Compare and contrast REST and GraphQL APIs, explaining their pros and cons",
+    force_model: false // Optional: force using this model even if query seems simple
+  }
+});
+```
 
+### 3. Deep Research (Sonar Deep Research)
+Conducts comprehensive research and generates detailed reports. Ideal for in-depth analysis of complex topics.
 
-## Installation
+```javascript
+const result = await use_mcp_tool({
+  server_name: "perplexity",
+  tool_name: "deep_research",
+  arguments: {
+    query: "The impact of quantum computing on cryptography",
+    focus_areas: [
+      "Post-quantum cryptographic algorithms",
+      "Timeline for quantum threats",
+      "Practical mitigation strategies"
+    ],
+    force_model: false // Optional: force using this model even if query seems simple
+  }
+});
+```
 
-### paste this part into claude directly if you want to, the ai can install it for you
+## Intelligent Model Selection
 
-1. First install Node.js if not already installed (from nodejs.org)
+The server automatically analyzes query complexity to route requests to the most appropriate model:
 
-2. Clone the repo
+1. **Simple Queries** → Sonar Pro
+   - Basic information lookup
+   - Straightforward questions
+   - Quick facts
 
-- git clone https://github.com/DaInfernalCoder/researcher-mcp perplexity-server 
+2. **Complex Queries** → Sonar Reasoning Pro
+   - How/why questions
+   - Comparisons
+   - Step-by-step explanations
+   - Problem-solving tasks
 
-- cd perplexity-server
+3. **Research Queries** → Sonar Deep Research
+   - In-depth analysis
+   - Comprehensive research
+   - Detailed investigations
+   - Multi-faceted topics
 
-3. Install dependencies and build:
-npm install
+You can override the automatic selection using `force_model: true` in any tool's arguments.
 
-4. Get a Perplexity API key from [https://www.perplexity.ai/settings/api](https://www.perplexity.ai/settings/api)
+## Setup
 
-5. Create the MCP settings file in the appropriate location for your OS:
-macOS: ~/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
-Windows: %APPDATA%\Cursor\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json
-Linux: ~/.config/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+1. **Prerequisites**
+   - Node.js (from [nodejs.org](https://nodejs.org))
+   - Perplexity API key (from [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api))
 
-5. To use with Claude Desktop, add the server config:
+2. **Configure MCP Settings**
 
-On MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
-
-6. To use with Cline, add into mcpServers: 
+Add to your MCP settings file (location varies by platform):
 
 ```json
 {
   "mcpServers": {
-    "perplexity-server": {
+    "perplexity": {
       "command": "node",
-      "args": [
-        "[path/to/researcher-mcp/index.js]"
-      ],
+      "args": ["/path/to/perplexity-server/build/index.js"],
       "env": {
-        "PERPLEXITY_API_KEY": ""
+        "PERPLEXITY_API_KEY": "YOUR_API_KEY_HERE"
       },
       "disabled": false,
-      "autoApprove": [
-        "search",
-        "get_documentation",
-        "find_apis",
-        "check_deprecated_code"
-      ]
+      "autoApprove": []
     }
   }
 }
 ```
 
-7. Build the server: 
-npm run build
+Settings file locations:
+- Cursor: 
+  - macOS: `~/Library/Application Support/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+  - Windows: `%APPDATA%\Cursor\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+  - Linux: `~/.config/Cursor/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+- Claude Desktop:
+  - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+  - Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
-Make sure to:
-- Replace /absolute/path/to with the actual path where you cloned the repository
-- Replace your-api-key-here with your Perplexity API key
-- Keep the same autoApprove settings for consistent behavior
+Or use NPX to not have to install it locally: 
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "perplexity-mcp"
+      ],
+      "env": {
+        "PERPLEXITY_API_KEY": "your_api_key"
+      }
+    }
+  }
+}
+```
+## Local Development
 
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Build: `npm run build`
+4. Start: `npm start`
+5. put in the api key
+
+or
+1. use the npx command and put in the api key
+
+## Testing
+
+- Type checking: `npm test`
+- Manual testing: `npm run inspector`

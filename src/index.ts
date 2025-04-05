@@ -19,21 +19,15 @@ if (!PERPLEXITY_API_KEY) {
   throw new Error("PERPLEXITY_API_KEY environment variable is required");
 }
 
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
 class PerplexityServer {
   private server: Server;
   private axiosInstance;
-  private db: Database.Database;
 
   constructor() {
     this.server = new Server(
       {
         name: "perplexity-server",
-        version: "0.1.0",
+        version: "0.2.0",
       },
       {
         capabilities: {
@@ -50,94 +44,56 @@ class PerplexityServer {
       },
     });
 
-    // Initialize SQLite database
-    const dbPath = join(homedir(), ".perplexity-mcp", "chat_history.db");
-
-    // Ensure the directory exists
-    const dbDir = dirname(dbPath);
-    if (!existsSync(dbDir)) {
-      mkdirSync(dbDir);
-    }
-
-    this.db = new Database(dbPath, { fileMustExist: false });
-    this.initializeDatabase();
-
     this.setupToolHandlers();
     
     // Error handling
     this.server.onerror = (error) => console.error("[MCP Error]", error);
     process.on("SIGINT", async () => {
-      this.db.close();
       await this.server.close();
       process.exit(0);
     });
   }
 
-  private initializeDatabase() {
-    // Create chats table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS chats (
-        id TEXT PRIMARY KEY,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+  /**
+   * Determines the complexity of a query to choose the appropriate model
+   */
+  private determineQueryComplexity(query: string): "simple" | "complex" | "research" {
+    // Check for research indicators
+    const researchIndicators = [
+      "analyze", "research", "investigate", "study", "examine", "explore",
+      "comprehensive", "detailed", "in-depth", "thorough",
+      "compare and contrast", "evaluate", "assess"
+    ];
+    
+    // Check for complex reasoning indicators
+    const complexIndicators = [
+      "how", "why", "what if", "explain", "solve", "steps to",
+      "difference between", "compare", "which is better",
+      "pros and cons", "advantages", "disadvantages"
+    ];
 
-    // Create messages table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chat_id TEXT NOT NULL,
-        role TEXT NOT NULL,
-        content TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (chat_id) REFERENCES chats(id)
-      )
-    `);
-  }
+    const query_lower = query.toLowerCase();
 
-  private getChatHistory(chatId: string): ChatMessage[] {
-    const messages = this.db.prepare(
-      "SELECT role, content FROM messages WHERE chat_id = ? ORDER BY created_at ASC"
-    ).all(chatId);
-    return messages as ChatMessage[];
-  }
+    // Check for research patterns
+    if (researchIndicators.some(indicator => query_lower.includes(indicator))) {
+      return "research";
+    }
 
-  private saveChatMessage(chatId: string, message: ChatMessage) {
-    // Ensure chat exists
-    this.db.prepare(
-      "INSERT OR IGNORE INTO chats (id) VALUES (?)"
-    ).run(chatId);
+    // Check for complex patterns
+    if (complexIndicators.some(indicator => query_lower.includes(indicator))) {
+      return "complex";
+    }
 
-    // Save message
-    this.db.prepare(
-      "INSERT INTO messages (chat_id, role, content) VALUES (?, ?, ?)"
-    ).run(chatId, message.role, message.content);
+    // Default to simple if no complex/research patterns found
+    return "simple";
   }
 
   private setupToolHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
         {
-          name: "chat_perplexity",
-          description: "Maintains ongoing conversations with Perplexity AI. Creates new chats or continues existing ones with full history context.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              message: {
-                type: "string",
-                description: "The message to send to Perplexity AI"
-              },
-              chat_id: {
-                type: "string",
-                description: "Optional: ID of an existing chat to continue. If not provided, a new chat will be created."
-              }
-            },
-            required: ["message"]
-          }
-        },
-        {
           name: "search",
-          description: "Perform a general search query to get comprehensive information on any topic",
+          description: "Quick search for simple queries using Perplexity's Sonar Pro model. Best for straightforward questions and basic information lookup.",
           inputSchema: {
             type: "object",
             properties: {
@@ -145,67 +101,58 @@ class PerplexityServer {
                 type: "string",
                 description: "The search query or question"
               },
-              detail_level: {
-                type: "string",
-                description: "Optional: Desired level of detail (brief, normal, detailed)",
-                enum: ["brief", "normal", "detailed"]
+              force_model: {
+                type: "boolean",
+                description: "Optional: Force using this model even if query seems complex",
+                default: false
               }
             },
             required: ["query"]
           }
         },
         {
-          name: "get_documentation",
-          description: "Get documentation and usage examples for a specific technology, library, or API",
+          name: "reason",
+          description: "Handles complex, multi-step tasks using Perplexity's Sonar Reasoning Pro model. Best for explanations, comparisons, and problem-solving.",
           inputSchema: {
             type: "object",
             properties: {
               query: {
                 type: "string",
-                description: "The technology, library, or API to get documentation for"
+                description: "The complex query or task to reason about"
               },
-              context: {
-                type: "string",
-                description: "Additional context or specific aspects to focus on"
+              force_model: {
+                type: "boolean",
+                description: "Optional: Force using this model even if query seems simple/research-oriented",
+                default: false
               }
             },
             required: ["query"]
           }
         },
         {
-          name: "find_apis",
-          description: "Find and evaluate APIs that could be integrated into a project",
+          name: "deep_research",
+          description: "Conducts in-depth analysis and generates detailed reports using Perplexity's Sonar Deep Research model. Best for comprehensive research topics.",
           inputSchema: {
             type: "object",
             properties: {
-              requirement: {
+              query: {
                 type: "string",
-                description: "The functionality or requirement you're looking to fulfill"
+                description: "The research topic or question to investigate in depth"
               },
-              context: {
-                type: "string",
-                description: "Additional context about the project or specific needs"
+              focus_areas: {
+                type: "array",
+                items: {
+                  type: "string"
+                },
+                description: "Optional: Specific aspects or areas to focus on"
+              },
+              force_model: {
+                type: "boolean",
+                description: "Optional: Force using this model even if query seems simple",
+                default: false
               }
             },
-            required: ["requirement"]
-          }
-        },
-        {
-          name: "check_deprecated_code",
-          description: "Check if code or dependencies might be using deprecated features",
-          inputSchema: {
-            type: "object",
-            properties: {
-              code: {
-                type: "string",
-                description: "The code snippet or dependency to check"
-              },
-              technology: {
-                type: "string",
-                description: "The technology or framework context (e.g., 'React', 'Node.js')"
-              }
-            },
-            required: ["code"]
+            required: ["query"]
           }
         }
       ]
@@ -213,149 +160,65 @@ class PerplexityServer {
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
-        switch (request.params.name) {
-          case "chat_perplexity": {
-            const { message, chat_id = crypto.randomUUID() } = request.params.arguments as { 
-              message: string; 
-              chat_id?: string;
-            };
+        const { query, force_model = false } = request.params.arguments as {
+          query: string;
+          force_model?: boolean;
+        };
 
-            // Get chat history
-            const history = this.getChatHistory(chat_id);
-            
-            // Add new user message
-            const userMessage: ChatMessage = { role: "user", content: message };
-            this.saveChatMessage(chat_id, userMessage);
-
-            // Prepare messages array with history
-            const messages = [...history, userMessage];
-
-            // Call Perplexity API
-            const response = await this.axiosInstance.post("/chat/completions", {
-              model: "sonar-reasoning-pro",
-              messages,
-            });
-
-            // Save assistant's response
-            const assistantMessage: ChatMessage = {
-              role: "assistant",
-              content: response.data.choices[0].message.content,
-            };
-            this.saveChatMessage(chat_id, assistantMessage);
-
-            return {
-              content: [{
-                type: "text",
-                text: JSON.stringify({
-                  chat_id,
-                  response: assistantMessage.content
-                }, null, 2)
-              }]
-            };
+        // Determine which model to use based on query complexity
+        let selectedTool = request.params.name;
+        if (!force_model && selectedTool === "search") {
+          const complexity = this.determineQueryComplexity(query);
+          if (complexity === "complex") {
+            selectedTool = "reason";
+          } else if (complexity === "research") {
+            selectedTool = "deep_research";
           }
+        }
 
-          case "get_documentation": {
-            const { query, context = "" } = request.params.arguments as { query: string; context?: string };
-            const prompt = `Provide comprehensive documentation and usage examples for ${query}. ${context ? `Focus on: ${context}` : ""} Include:
-            1. Basic overview and purpose
-            2. Key features and capabilities
-            3. Installation/setup if applicable
-            4. Common usage examples
-            5. Best practices
-            6. Common pitfalls to avoid
-            7. Links to official documentation if available`;
+        let model: string;
+        let prompt: string;
 
-            const response = await this.axiosInstance.post("/chat/completions", {
-              model: "sonar-reasoning-pro",
-              messages: [{ role: "user", content: prompt }],
-            });
-
-            return {
-              content: [{
-                type: "text",
-                text: response.data.choices[0].message.content
-              }]
-            };
-          }
-
-          case "find_apis": {
-            const { requirement, context = "" } = request.params.arguments as { requirement: string; context?: string };
-            const prompt = `Find and evaluate APIs that could be used for: ${requirement}. ${context ? `Context: ${context}` : ""} For each API, provide:
-            1. Name and brief description
-            2. Key features and capabilities
-            3. Pricing model (if available)
-            4. Integration complexity
-            5. Documentation quality
-            6. Community support and popularity
-            7. Any potential limitations or concerns
-            8. Code example of basic usage`;
-
-            const response = await this.axiosInstance.post("/chat/completions", {
-              model: "sonar-reasoning-pro",
-              messages: [{ role: "user", content: prompt }],
-            });
-
-            return {
-              content: [{
-                type: "text",
-                text: response.data.choices[0].message.content
-              }]
-            };
-          }
-
-          case "check_deprecated_code": {
-            const { code, technology = "" } = request.params.arguments as { code: string; technology?: string };
-            const prompt = `Analyze this code for deprecated features or patterns${technology ? ` in ${technology}` : ""}:
-
-            ${code}
-
-            Please provide:
-            1. Identification of any deprecated features, methods, or patterns
-            2. Current recommended alternatives
-            3. Migration steps if applicable
-            4. Impact of the deprecation
-            5. Timeline of deprecation if known
-            6. Code examples showing how to update to current best practices`;
-
-            const response = await this.axiosInstance.post("/chat/completions", {
-              model: "sonar-reasoning-pro",
-              messages: [{ role: "user", content: prompt }],
-            });
-
-            return {
-              content: [{
-                type: "text",
-                text: response.data.choices[0].message.content
-              }]
-            };
-          }
-
+        switch (selectedTool) {
           case "search": {
-            const { query, detail_level = "normal" } = request.params.arguments as { query: string; detail_level?: "brief" | "normal" | "detailed" };
+            model = "sonar-pro";
+            prompt = `Provide a clear, concise answer to: ${query}`;
+            break;
+          }
+
+          case "reason": {
+            model = "sonar-reasoning-pro";
+            prompt = `Provide a detailed explanation and analysis for: ${query}. Include:
+            1. Step-by-step reasoning
+            2. Key considerations
+            3. Relevant examples
+            4. Practical implications
+            5. Potential alternatives`;
+            break;
+          }
+
+          case "deep_research": {
+            model = "sonar-deep-research";
+            const { focus_areas = [] } = request.params.arguments as { focus_areas?: string[] };
             
-            let prompt = query;
-            switch (detail_level) {
-              case "brief":
-                prompt = `Provide a brief, concise answer to: ${query}`;
-                break;
-              case "detailed":
-                prompt = `Provide a comprehensive, detailed analysis of: ${query}. Include relevant examples, context, and supporting information where applicable.`;
-                break;
-              default:
-                prompt = `Provide a clear, balanced answer to: ${query}. Include key points and relevant context.`;
+            prompt = `Conduct comprehensive research on: ${query}`;
+            
+            if (focus_areas.length > 0) {
+              prompt += `\n\nFocus areas:\n${focus_areas.map((area, i) => `${i + 1}. ${area}`).join('\n')}`;
             }
 
-            const response = await this.axiosInstance.post("/chat/completions", {
-              model: "sonar-reasoning-pro",
-              messages: [{ role: "user", content: prompt }],
-            });
-
-            return {
-              content: [{
-                type: "text",
-                text: response.data.choices[0].message.content
-              }]
-            };
+            prompt += `\n\nProvide a detailed analysis including:
+            1. Background and context
+            2. Key concepts and definitions
+            3. Current state of knowledge
+            4. Different perspectives
+            5. Recent developments
+            6. Practical applications
+            7. Challenges and limitations
+            8. Future directions
+            9. Expert opinions
+            10. References to sources`;
+            break;
           }
 
           default:
@@ -364,6 +227,18 @@ class PerplexityServer {
               `Unknown tool: ${request.params.name}`
             );
         }
+
+        const response = await this.axiosInstance.post("/chat/completions", {
+          model,
+          messages: [{ role: "user", content: prompt }],
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: response.data.choices[0].message.content
+          }]
+        };
       } catch (error) {
         if (axios.isAxiosError(error)) {
           throw new McpError(

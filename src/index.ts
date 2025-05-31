@@ -235,10 +235,9 @@ class PerplexityServer {
         // response.data can have a string[] .citations
         // these are referred to in the return text as numbered citations e.g. [1]
         const sourcesText = response.data.citations
-          ? `\n## Sources\nPlease keep the numbered citations inline.\n
-          ${response.data.citations
-            .map((c: string, i: number) => `${i + 1}: ${c}`)
-            .join("\n")}`
+          ? `\n\n## Sources\nPlease keep the numbered citations inline.\n${response.data.citations
+              .map((c: string, i: number) => `${i + 1}: ${c}`)
+              .join("\n")}`
           : "";
 
         return {
